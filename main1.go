@@ -18,7 +18,7 @@ var httpPort string
 
 func init() {
 	flag.StringVar(&grpcPort, "grpc_port", "8001", "gRPC 启动端口号")
-	flag.StringVar(&httpPort, "http_port", "9001", "HTTP 启动端口号")
+	flag.StringVar(&httpPort, "http_port", "8002", "HTTP 启动端口号")
 	flag.Parse()
 }
 
@@ -26,14 +26,14 @@ func main() {
 	errs := make(chan error)
 
 	go func() {
-		err := RunHttpServer(httpPort)
+		err := RunHttpServer1(httpPort)
 		if err != nil {
 			errs <- err
 		}
 	}()
 
 	go func() {
-		err := RunGrpcServer(grpcPort)
+		err := RunGrpcServer1(grpcPort)
 		if err != nil {
 			errs <- err
 		}
@@ -45,7 +45,7 @@ func main() {
 	}
 }
 
-func RunHttpServer(port string) error {
+func RunHttpServer1(port string) error {
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`pong`))
@@ -55,7 +55,7 @@ func RunHttpServer(port string) error {
 	return http.ListenAndServe(":"+port, serveMux)
 }
 
-func RunGrpcServer(port string) error {
+func RunGrpcServer1(port string) error {
 	s := grpc.NewServer()
 
 	pb.RegisterTagServiceServer(s, server.NewTagServer())
