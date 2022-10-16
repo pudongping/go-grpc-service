@@ -1,4 +1,4 @@
-package client
+package main
 
 import (
 	"context"
@@ -16,9 +16,13 @@ func main() {
 	// 初始化指定 RPC Proto Service 的客户端实例对象
 	tagServiceClient := pb.NewTagServiceClient(clientConn)
 	// 发起指定 RPC 方法的调用
-	resp, _ := tagServiceClient.GetTagList(ctx, &pb.GetTagListRequest{Name: "Go"})
+	resp, err := tagServiceClient.GetTagList(ctx, &pb.GetTagListRequest{Name: "Go"})
 
-	log.Printf("client resp: %v", resp)
+	if err != nil {
+		log.Printf("client err ====> %v", err)
+	}
+
+	log.Printf("client resp ====> %v", resp)
 }
 
 func GetClientConn(ctx context.Context, target string, opts []grpc.DialOption) (*grpc.ClientConn, error) {
