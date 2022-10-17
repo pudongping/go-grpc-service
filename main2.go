@@ -13,18 +13,18 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-var port string
+var grpcOrHttpPort string
 
 func init() {
-	flag.StringVar(&port, "port", "8003", "启动端口号")
+	flag.StringVar(&grpcOrHttpPort, "grpc_or_http_port", "8003", "一个端口上兼容多种协议，一个连接可以是 gRPC 或 HTTP 但不能同时是两者")
 	flag.Parse()
 }
 
-func RunTCPServer(port string) (net.Listener, error) {
+func RunTCPServer2(port string) (net.Listener, error) {
 	return net.Listen("tcp", ":"+port)
 }
 
-func RunGrpcServer() *grpc.Server {
+func RunGrpcServer2() *grpc.Server {
 	s := grpc.NewServer()
 	pb.RegisterTagServiceServer(s, server.NewTagServer())
 
@@ -35,7 +35,7 @@ func RunGrpcServer() *grpc.Server {
 	return s
 }
 
-func RunHttpServer(port string) *http.Server {
+func RunHttpServer2(port string) *http.Server {
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`pong`))
@@ -48,7 +48,7 @@ func RunHttpServer(port string) *http.Server {
 }
 
 func main() {
-	l, err := RunTCPServer(port)
+	l, err := RunTCPServer2(grpcOrHttpPort)
 	if err != nil {
 		log.Fatalf("Run TCP Server err: %v", err)
 	}
@@ -57,10 +57,12 @@ func main() {
 	grpcL := m.MatchWithWriters(cmux.HTTP2MatchHeaderFieldPrefixSendSettings("content-type", "application/grpc"))
 	httpL := m.Match(cmux.HTTP1Fast())
 
-	grpcS := RunGrpcServer()
-	httpS := RunHttpServer(port)
+	grpcS := RunGrpcServer2()
+	httpS := RunHttpServer2(grpcOrHttpPort)
 	go grpcS.Serve(grpcL)
 	go httpS.Serve(httpL)
+
+	log.Printf("grpc or http server is started at: 127.0.0.1:%s \n", grpcOrHttpPort)
 
 	err = m.Serve()
 	if err != nil {
