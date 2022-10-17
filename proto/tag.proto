@@ -6,9 +6,14 @@ package proto;
 option go_package = "./;proto";
 
 import "common.proto";
+import "google/api/annotations.proto";
 
 service TagService {
-  rpc GetTagList (GetTagListRequest) returns (GetTagListResponse) {}
+  rpc GetTagList (GetTagListRequest) returns (GetTagListResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/tags"
+    };
+  }
 }
 
 message GetTagListRequest {
