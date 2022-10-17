@@ -73,3 +73,8 @@ func RunGrpcServer1(port string) error {
 
 	return s.Serve(lis)
 }
+
+// 测试
+// go run main1.go
+// grpcurl -plaintext -d '{"name":"go"}' localhost:8001 proto.TagService/GetTagList
+// curl http://127.0.0.1:8002/ping
