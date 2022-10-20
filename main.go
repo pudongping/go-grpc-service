@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"log"
 	"net/http"
@@ -13,8 +14,10 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 )
 
 var grpcAndHttpPort string
@@ -22,6 +25,35 @@ var grpcAndHttpPort string
 func init() {
 	flag.StringVar(&grpcAndHttpPort, "grpc_and_http_port", "8004", "同端口下同 rpc 方法提供 gRPC 和 HTTP 双流量访问支持端口")
 	flag.Parse()
+}
+
+type httpError struct {
+	Code    int32  `json:"code,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+func grpcGatewayError(ctx context.Context, _ *runtime.ServeMux, marshaler runtime.Marshaler, w http.ResponseWriter, _ *http.Request, err error) {
+	s, ok := status.FromError(err)
+	if !ok {
+		s = status.New(codes.Unknown, err.Error())
+	}
+
+	httpError := httpError{
+		Code:    int32(s.Code()),
+		Message: s.Message(),
+	}
+	details := s.Details()
+	for _, detail := range details {
+		if v, ok := detail.(*pb.Error); ok {
+			httpError.Code = v.Code
+			httpError.Message = v.Message
+		}
+	}
+
+	resp, _ := json.Marshal(httpError)
+	w.Header().Set("Content-Type", marshaler.ContentType("application/json"))
+	w.WriteHeader(runtime.HTTPStatusFromCode(s.Code()))
+	_, _ = w.Write(resp)
 }
 
 func grpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
@@ -89,6 +121,9 @@ func runGrpcGatewayServer() *runtime.ServeMux {
 	endpoint := "0.0.0.0:" + grpcAndHttpPort
 	gwmux := runtime.NewServeMux()
 	dopts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	// 实际上在调用这类 RegisterXXXXHandlerFromEndpoint 注册方法时，主要是进行 gRPC 连接的创建和管控，
+	// 它在内部就已经调用了 grpc.Dial 对 gRPC Server 进行拨号连接，并保持住了一个 Conn 便于后续的 HTTP/1/1 调用转发。
+	// 另外在关闭连接的处理上，处理的也比较的稳健，统一都是放到 defer 中进行关闭，又或者根据 context 的上下文来控制连接的关闭时间
 	err := pb.RegisterTagServiceHandlerFromEndpoint(context.Background(), gwmux, endpoint, dopts)
 	if err != nil {
 		log.Fatalln("Failed to register gwmux:", err)
