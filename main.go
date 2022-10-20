@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"log"
-	"net"
 	"net/http"
 	"strings"
 
@@ -51,19 +50,19 @@ func RunServer(port string) error {
 	httpMux.Handle("/", gatewayMux)
 
 	// ABC====>>>
-	lis, err := net.Listen("tcp", ":"+port)
-	if err != nil {
-		log.Fatalln("Failed to listen:", err)
-	}
-	s := &http.Server{
-		Addr:    ":" + port,
-		Handler: grpcHandlerFunc(grpcS, httpMux), // 请求的统一入口
-	}
-	return s.Serve(lis)
+	// lis, err := net.Listen("tcp", ":"+port)
+	// if err != nil {
+	// 	log.Fatalln("Failed to listen:", err)
+	// }
+	// s := &http.Server{
+	// 	Addr:    ":" + port,
+	// 	Handler: grpcHandlerFunc(grpcS, httpMux), // 请求的统一入口
+	// }
+	// return s.Serve(lis)
 	// ABC====>>>
 
 	// 和以上 ABC 区域代码一致
-	// return http.ListenAndServe(":"+port, grpcHandlerFunc(grpcS, httpMux))
+	return http.ListenAndServe(":"+port, grpcHandlerFunc(grpcS, httpMux))
 }
 
 func runHttpServer() *http.ServeMux {
