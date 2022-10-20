@@ -10,7 +10,9 @@ import (
 	"strings"
 
 	assetfs "github.com/elazarl/go-bindata-assetfs"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/pudongping/go-grpc-service/internal/middleware"
 	"github.com/pudongping/go-grpc-service/pkg/swagger"
 	pb "github.com/pudongping/go-grpc-service/proto"
 	"github.com/pudongping/go-grpc-service/server"
@@ -130,7 +132,13 @@ func runHttpServer() *http.ServeMux {
 }
 
 func runGrpcServer() *grpc.Server {
-	s := grpc.NewServer()
+	opts := []grpc.ServerOption{
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			middleware.AccessLog, // 访问日志
+		)),
+	}
+
+	s := grpc.NewServer(opts...)
 	pb.RegisterTagServiceServer(s, server.NewTagServer())
 
 	// 注册反射服务，方便让 grpcurl 或者 grpcui 用作调试
