@@ -6,9 +6,12 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"path"
 	"strings"
 
+	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/pudongping/go-grpc-service/pkg/swagger"
 	pb "github.com/pudongping/go-grpc-service/proto"
 	"github.com/pudongping/go-grpc-service/server"
 	"golang.org/x/net/http2"
@@ -101,6 +104,26 @@ func runHttpServer() *http.ServeMux {
 	httpMux := http.NewServeMux()
 	httpMux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`pong`))
+	})
+
+	prefix := "/swagger-ui/"
+	fileServer := http.FileServer(&assetfs.AssetFS{
+		Asset:    swagger.Asset,
+		AssetDir: swagger.AssetDir,
+		Prefix:   "third_party/swagger-ui",
+	})
+
+	httpMux.Handle(prefix, http.StripPrefix(prefix, fileServer))
+	httpMux.HandleFunc("/swagger/", func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "swagger.json") {
+			http.NotFound(w, r)
+			return
+		}
+
+		p := strings.TrimPrefix(r.URL.Path, "/swagger/")
+		p = path.Join("proto", p)
+
+		http.ServeFile(w, r, p)
 	})
 
 	return httpMux
