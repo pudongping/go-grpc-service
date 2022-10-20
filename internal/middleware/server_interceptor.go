@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"log"
+	"runtime/debug"
 	"time"
 
 	"github.com/pudongping/go-grpc-service/pkg/errcode"
@@ -32,4 +33,16 @@ func ErrorLog(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, 
 		log.Printf(errLog, info.FullMethod, s.Code(), s.Err().Error(), s.Details())
 	}
 	return resp, err
+}
+
+// Recovery 异常捕获
+func Recovery(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	defer func() {
+		if e := recover(); e != nil {
+			recoveryLog := "recovery log: method: %s, message: %v, stack: %s"
+			log.Printf(recoveryLog, info.FullMethod, e, string(debug.Stack()[:]))
+		}
+	}()
+
+	return handler(ctx, req)
 }

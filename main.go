@@ -136,6 +136,7 @@ func runGrpcServer() *grpc.Server {
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			middleware.AccessLog, // 访问日志
 			middleware.ErrorLog,  // 错误日志
+			middleware.Recovery,  // 异常捕获
 		)),
 	}
 
