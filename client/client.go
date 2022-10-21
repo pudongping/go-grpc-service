@@ -9,11 +9,21 @@ import (
 	pb "github.com/pudongping/go-grpc-service/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 func main() {
 	ctx := context.Background()
-	clientConn, _ := GetClientConn(ctx, "localhost:8004", []grpc.DialOption{grpc.WithUnaryInterceptor(
+
+	// 客户端添加 metadata 数据
+	// 在新增 metadata 信息时，务必使用 Append 类别的方法，
+	// 否则如果直接 New 一个全新的 md，将会导致原有的 metadata 信息丢失（除非你确定你希望得到这样的结果）
+	newCtx := metadata.AppendToOutgoingContext(ctx, "name", "alex")
+	// NewIncomingContext：创建一个附加了所传入的 md 新上下文，仅供自身的 gRPC 服务端内部使用。
+	// NewOutgoingContext：创建一个附加了传出 md 的新上下文，可供外部的 gRPC 客户端、服务端使用
+	// newCtx := metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{"name": "alex"}))
+
+	clientConn, _ := GetClientConn(newCtx, "localhost:8004", []grpc.DialOption{grpc.WithUnaryInterceptor(
 		grpc_middleware.ChainUnaryClient(
 			middleware.UnaryContextTimeout(),
 		),
@@ -23,7 +33,7 @@ func main() {
 	// 初始化指定 RPC Proto Service 的客户端实例对象
 	tagServiceClient := pb.NewTagServiceClient(clientConn)
 	// 发起指定 RPC 方法的调用
-	resp, err := tagServiceClient.GetTagList(ctx, &pb.GetTagListRequest{Name: "Go"})
+	resp, err := tagServiceClient.GetTagList(newCtx, &pb.GetTagListRequest{Name: "Go"})
 
 	if err != nil {
 		log.Printf("client err ====> %v", err)
