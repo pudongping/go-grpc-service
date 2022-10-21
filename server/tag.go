@@ -57,9 +57,9 @@ func (t *TagServer) GetTagList(ctx context.Context, r *pb.GetTagListRequest) (*p
 	log.Printf("获取类似于 header 头的信息为 ====> %+v \n", md)
 
 	// 授权验证
-	if err := t.auth.Check(ctx); err != nil {
-		return nil, err
-	}
+	// if err := t.auth.Check(ctx); err != nil {
+	// 	return nil, err
+	// }
 
 	api := bapi.NewAPI("http://127.0.0.1:8000")
 	body, err := api.GetTagList(ctx, r.GetName())

@@ -6,9 +6,36 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
+	"github.com/pudongping/go-grpc-service/global"
 	"github.com/pudongping/go-grpc-service/pkg/errcode"
+	"github.com/pudongping/go-grpc-service/pkg/metatext"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
+
+func ServerTracing(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	// 解析出 metadata
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		md = metadata.New(nil)
+	}
+	// 从给定的载体中解码出 SpanContext 实例
+	parentSpanContext, _ := global.Tracer.Extract(opentracing.TextMap, metatext.MetadataTextMap{md})
+	// 创建和设置本次跨度的标签信息
+	spanOpts := []opentracing.StartSpanOption{
+		opentracing.Tag{Key: string(ext.Component), Value: "gRPC"},
+		ext.SpanKindRPCServer,
+		ext.RPCServerOption(parentSpanContext),
+	}
+	span := global.Tracer.StartSpan(info.FullMethod, spanOpts...)
+	defer span.Finish()
+
+	// 根据当前的跨度返回一个新的 context.Context
+	ctx = opentracing.ContextWithSpan(ctx, span)
+	return handler(ctx, req)
+}
 
 // AccessLog 访问日志
 func AccessLog(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {

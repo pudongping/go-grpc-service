@@ -12,8 +12,10 @@ import (
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/pudongping/go-grpc-service/global"
 	"github.com/pudongping/go-grpc-service/internal/middleware"
 	"github.com/pudongping/go-grpc-service/pkg/swagger"
+	"github.com/pudongping/go-grpc-service/pkg/tracer"
 	pb "github.com/pudongping/go-grpc-service/proto"
 	"github.com/pudongping/go-grpc-service/server"
 	"golang.org/x/net/http2"
@@ -30,6 +32,21 @@ var grpcAndHttpPort string
 func init() {
 	flag.StringVar(&grpcAndHttpPort, "grpc_and_http_port", "8004", "同端口下同 rpc 方法提供 gRPC 和 HTTP 双流量访问支持端口")
 	flag.Parse()
+
+	err := setupTracer()
+	if err != nil {
+		log.Fatalf("init.setupTracer err: %v", err)
+	}
+}
+
+// 初始化链路追踪
+func setupTracer() error {
+	jaegerTracer, _, err := tracer.NewJaegerTracer("alex-grpc-service", "127.0.0.1:6831")
+	if err != nil {
+		return err
+	}
+	global.Tracer = jaegerTracer
+	return nil
 }
 
 type httpError struct {
@@ -134,9 +151,10 @@ func runHttpServer() *http.ServeMux {
 func runGrpcServer() *grpc.Server {
 	opts := []grpc.ServerOption{
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-			middleware.AccessLog, // 访问日志
-			middleware.ErrorLog,  // 错误日志
-			middleware.Recovery,  // 异常捕获
+			middleware.AccessLog,     // 访问日志
+			middleware.ErrorLog,      // 错误日志
+			middleware.Recovery,      // 异常捕获
+			middleware.ServerTracing, // 链路追踪
 		)),
 	}
 

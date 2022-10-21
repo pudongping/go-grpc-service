@@ -7,7 +7,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 	"golang.org/x/net/context/ctxhttp"
 )
 
@@ -28,7 +31,7 @@ func NewAPI(url string) *API {
 	return &API{URL: url}
 }
 
-func (a *API) httpGet(ctx context.Context, path string) ([]byte, error) {
+func (a *API) _httpGet(ctx context.Context, path string) ([]byte, error) {
 	resp, err := ctxhttp.Get(ctx, http.DefaultClient, fmt.Sprintf("%s/%s", a.URL, path))
 	if err != nil {
 		return nil, err
@@ -36,6 +39,45 @@ func (a *API) httpGet(ctx context.Context, path string) ([]byte, error) {
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	return body, err
+}
+
+func (a *API) httpGet(ctx context.Context, path string) ([]byte, error) {
+	url := fmt.Sprintf("%s/%s", a.URL, path)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	span, _ := opentracing.StartSpanFromContext(
+		ctx,
+		"HTTP GET: "+a.URL,
+		opentracing.Tag{Key: string(ext.Component), Value: "HTTP"},
+	)
+	span.SetTag("url", url)
+	_ = opentracing.GlobalTracer().Inject(
+		span.Context(),
+		opentracing.HTTPHeaders,
+		opentracing.HTTPHeadersCarrier(req.Header),
+	)
+
+	req = req.WithContext(context.Background())
+	client := http.Client{
+		Timeout: time.Second * 60,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	defer span.Finish()
+
+	// 读取消息主体，在实际封装中可以将其抽离
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
 }
 
 func (a *API) httpPost(ctx context.Context, path, params string) ([]byte, error) {

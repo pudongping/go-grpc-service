@@ -45,14 +45,18 @@ func main() {
 	// NewOutgoingContext：创建一个附加了传出 md 的新上下文，可供外部的 gRPC 客户端、服务端使用
 	// newCtx := metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{"name": "alex"}))
 
-	clientConn, _ := GetClientConn(newCtx, "localhost:8004", []grpc.DialOption{
+	clientConn, err := GetClientConn(newCtx, "localhost:8004", []grpc.DialOption{
 		grpc.WithUnaryInterceptor(
 			grpc_middleware.ChainUnaryClient(
 				middleware.UnaryContextTimeout(),
+				middleware.ClientTracing(), // 链路追踪
 			),
 		),
 		grpc.WithPerRPCCredentials(&auth), // 做自定义认证
 	})
+	if err != nil {
+		log.Fatalf("err: %v", err)
+	}
 	defer clientConn.Close()
 
 	// 初始化指定 RPC Proto Service 的客户端实例对象
