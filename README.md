@@ -136,3 +136,8 @@ go run client/client.go
 2022/10/22 00:20:31 获取类似于 header 头的信息为 ====> map[:authority:[localhost:8004] app_key:[alex] app_secret:[never_give_up] content-type:[application/grpc] name:[alex] uber-trace-id:[198e5a4758afdcac:198e5a4758afdcac:0000000000000000:1] user-agent:[grpc-go/1.50.1]] 
 2022/10/22 00:20:31 access response log: method: /proto.TagService/GetTagList, begin_time: 1666369231, end_time: 1666369231, response: list:{id:1 name:"Go" state:1} pager:{page:1 page_size:10 total_rows:1}
 ```
+
+## 其他
+
+由于担心某些包可能会在日后变更包名之类的，导致依赖下载失败，因此已经将所有的依赖都备份至项目根目录 `vendor` 目录下  
+如果要使用根目录下的 `vendor` 目录依赖包，需要执行 `go build -mod=vendor` 才可以使用 vendor 作为依赖来编译
