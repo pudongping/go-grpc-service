@@ -12,8 +12,30 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+type Auth struct {
+	AppKey    string
+	AppSecret string
+}
+
+func (a *Auth) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
+	return map[string]string{
+		"app_key":    a.AppKey,
+		"app_secret": a.AppSecret,
+	}, nil
+}
+
+func (a *Auth) RequireTransportSecurity() bool {
+	return false
+}
+
 func main() {
 	ctx := context.Background()
+
+	// 添加授权认证信息
+	auth := Auth{
+		AppKey:    "alex",
+		AppSecret: "never_give_up",
+	}
 
 	// 客户端添加 metadata 数据
 	// 在新增 metadata 信息时，务必使用 Append 类别的方法，
@@ -23,11 +45,14 @@ func main() {
 	// NewOutgoingContext：创建一个附加了传出 md 的新上下文，可供外部的 gRPC 客户端、服务端使用
 	// newCtx := metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{"name": "alex"}))
 
-	clientConn, _ := GetClientConn(newCtx, "localhost:8004", []grpc.DialOption{grpc.WithUnaryInterceptor(
-		grpc_middleware.ChainUnaryClient(
-			middleware.UnaryContextTimeout(),
+	clientConn, _ := GetClientConn(newCtx, "localhost:8004", []grpc.DialOption{
+		grpc.WithUnaryInterceptor(
+			grpc_middleware.ChainUnaryClient(
+				middleware.UnaryContextTimeout(),
+			),
 		),
-	)})
+		grpc.WithPerRPCCredentials(&auth), // 做自定义认证
+	})
 	defer clientConn.Close()
 
 	// 初始化指定 RPC Proto Service 的客户端实例对象
