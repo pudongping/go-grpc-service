@@ -22,8 +22,10 @@ func (a *Auth) GetAppSecret() string {
 	return "never_give_up"
 }
 
+// grpc 鉴权
 func (a *Auth) Check(ctx context.Context) error {
 	// FromIncomingContext：读取 metadata，仅供自身的 gRPC 服务端内部使用。
+	// 这里的鉴权信息由 client/client.go 中携带
 	md, _ := metadata.FromIncomingContext(ctx)
 
 	var appKey, appSecret string

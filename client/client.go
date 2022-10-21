@@ -5,18 +5,28 @@ import (
 	"log"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"github.com/pudongping/go-grpc-service/global"
 	"github.com/pudongping/go-grpc-service/internal/middleware"
+	"github.com/pudongping/go-grpc-service/pkg/tracer"
 	pb "github.com/pudongping/go-grpc-service/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
+func init() {
+	err := setupTracer()
+	if err != nil {
+		log.Fatalf("init.setupTracer err: %v", err)
+	}
+}
+
 type Auth struct {
 	AppKey    string
 	AppSecret string
 }
 
+// 类似于设置 header 信息
 func (a *Auth) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
 	return map[string]string{
 		"app_key":    a.AppKey,
@@ -24,6 +34,7 @@ func (a *Auth) GetRequestMetadata(ctx context.Context, uri ...string) (map[strin
 	}, nil
 }
 
+// 是否开启 tls
 func (a *Auth) RequireTransportSecurity() bool {
 	return false
 }
@@ -77,4 +88,14 @@ func GetClientConn(ctx context.Context, target string, opts []grpc.DialOption) (
 	// 创建给定目标的客户端连接，另外我们所要请求的服务端是非加密模式的，
 	// 因此我们调用了 grpc.WithInsecure 方法禁用了此 ClientConn 的传输安全性验证
 	return grpc.DialContext(ctx, target, opts...)
+}
+
+func setupTracer() error {
+	var err error
+	jaegerTracer, _, err := tracer.NewJaegerTracer("article-service", "127.0.0.1:6831")
+	if err != nil {
+		return err
+	}
+	global.Tracer = jaegerTracer
+	return nil
 }

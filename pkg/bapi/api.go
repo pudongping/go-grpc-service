@@ -105,7 +105,8 @@ func (a *API) getAccessToken(ctx context.Context) (string, error) {
 	return accessToken.Token, nil
 }
 
-func (a *API) GetTagList(ctx context.Context, name string) ([]byte, error) {
+// 如果需要演示 http 请求的话呢，还需要将 [gin-blog-service](https://github.com/pudongping/gin-blog-service) 项目跑起来才行
+func (a *API) _GetTagList(ctx context.Context, name string) ([]byte, error) {
 	token, err := a.getAccessToken(ctx)
 	if err != nil {
 		return nil, err
@@ -115,6 +116,20 @@ func (a *API) GetTagList(ctx context.Context, name string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("\n")
+	fmt.Println(string(body))
 
 	return body, nil
+}
+
+// 为了单纯跑本项目，不依赖其他的项目，故此操作，写一个假数据
+// 本项目的重点在于学习 grpc
+func (a *API) GetTagList(ctx context.Context, name string) ([]byte, error) {
+	resp := `{"list":[{"id":1,"created_on":0,"created_by":"alex","modified_on":1641743745,"modified_by":"alex","deleted_on":0,"is_del":0,"name":"Go","state":1},{"id":2,"created_on":1641719964,"created_by":"alex","modified_on":1641719964,"modified_by":"","deleted_on":0,"is_del":0,"name":"PHP","state":1},{"id":3,"created_on":1641720152,"created_by":"alex","modified_on":1641720152,"modified_by":"","deleted_on":0,"is_del":0,"name":"Rust","state":1}],"pager":{"page":1,"page_size":10,"total_rows":3}}`
+	if name == "" {
+		return []byte(resp), nil
+	}
+
+	res := `{"list":[{"id":1,"created_on":0,"created_by":"alex","modified_on":1641743745,"modified_by":"alex","deleted_on":0,"is_del":0,"name":"` + name + `","state":1}],"pager":{"page":1,"page_size":10,"total_rows":1}}`
+	return []byte(res), nil
 }
