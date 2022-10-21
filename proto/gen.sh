@@ -10,3 +10,10 @@ protoc -I. \
 --grpc-gateway_out=logtostderr=true:. \
 --swagger_out=logtostderr=true:. \
 ./*.proto
+
+
+# 插件名称 | 对应的命令
+# --- | ---
+# protoc-gen-go | --go_out
+# protoc-gen-grpc-gateway | --grpc-gateway_out
+# protoc-gen-swagger | --swagger_out
