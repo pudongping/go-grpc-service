@@ -59,8 +59,10 @@ func main() {
 	clientConn, err := GetClientConn(newCtx, "localhost:8004", []grpc.DialOption{
 		grpc.WithUnaryInterceptor(
 			grpc_middleware.ChainUnaryClient(
-				middleware.UnaryContextTimeout(),
-				middleware.ClientTracing(), // 链路追踪
+				// 如果我们不做超时控制，短时间内不会出现问题，但是会不断泄漏，直至服务无法正常运行
+				// 当自身服务逐渐出现问题时，其会影响上下游的服务调用，因此默认对上下文进行超时控制非常重要
+				middleware.UnaryContextTimeout(), // 超时控制
+				middleware.ClientTracing(),       // 链路追踪
 			),
 		),
 		grpc.WithPerRPCCredentials(&auth), // 做自定义认证
@@ -68,6 +70,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}
+	// 如果是常驻进程且我们不执行 Close() 语句可能会导致内存泄漏，
+	// 如果客户端不是常驻进程，即在应用结束时会被动地回收资源
 	defer clientConn.Close()
 
 	// 初始化指定 RPC Proto Service 的客户端实例对象
